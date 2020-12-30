@@ -190,6 +190,81 @@ const (
 	CfgRateGalileo CfgRateTimeRef = 4
 )
 
+// UBX-CFG-PRT (0x06 0x00)
+// Description    Port configuration for UART ports
+// Type           Get/set
+// Several configurations can be concatenated to one input message. In this case
+// the payload length can be a multiple of the normal length (see the other versions
+// of CFG-PRT). Output messages from the module contain only one configuration
+// unit.
+// Note that this message can affect baud rate and other transmission
+// parameters. Because there may be messages queued for transmission there
+// may be uncertainty about which protocol applies to such messages. In addition a
+// message currently in transmission may be corrupted by a protocol change. Host
+// data reception parameters may have to be changed to be able to receive future
+// messages, including the acknowledge message resulting from the CFG-PRT
+// message.
+type CfgPrt1 struct {
+	PortID       byte                // Port identifier number (see Integration manual for valid UART port IDs)
+	Reserved1    byte                // Reserved
+	TxReady      CfgPrt1TxReady      // TX ready PIN configuration
+	Mode         CfgPrt1Mode         // A bit mask describing the UART mode
+	BaudRate     uint32              // [Bits/s] Baud rate in bits/second
+	InProtoMask  CfgPrt1InProtoMask  // A mask describing which input protocols are active. Each bit of this mask is used for a protocol. Through that, multiple protocols can be defined on a single port.
+	OutProtoMask CfgPrt1OutProtoMask // A mask describing which output protocols are active. Each bit of this mask is used for a protocol. Through that, multiple protocols can be defined on a single port.
+	Flags        CfgPrt1Flags        // Flags bit mask
+	Reserved2    [2]byte             // Reserved
+}
+
+func (CfgPrt1) classID() uint16 { return 0x0006 }
+
+type CfgPrt1TxReady uint16
+
+const (
+	CfgPrt1TxReadyEn    CfgPrt1TxReady = 0x1    // Enable TX ready feature for this port
+	CfgPrt1TxReadyPol   CfgPrt1TxReady = 0x2    // Polarity 0 High-active 1 Low-active
+	CfgPrt1TxReadyPin   CfgPrt1TxReady = 0x7c   // PIO to be used (must not be in use by another function)
+	CfgPrt1TxReadyThres CfgPrt1TxReady = 0xff80 // Threshold The given threshold is multiplied by 8 bytes. The TX ready PIN goes active after &gt;= thres*8 bytes are pending for the port and going inactive after the last pending bytes have been written to hardware (0-4 bytes before end of stream). 0x000 no threshold 0x001 8byte 0x002 16byte ... 0x1FE 4080byte 0x1FF 4088byte
+)
+
+type CfgPrt1Mode uint32
+
+const (
+	CfgPrt1ModeCharLen CfgPrt1Mode = 0xc0 // Character length 00 5bit (not supported) 01 6bit (not supported) 10 7bit (supported only with parity) 11 8bit
+
+	CfgPrt1ModeParity    CfgPrt1Mode = 0xe00  // 000 Even parity 001 Odd parity 10X No parity X1X Reserved
+	CfgPrt1ModeNStopBits CfgPrt1Mode = 0x3000 // Number of Stop bits 00 1 Stop bit 01 1.5 Stop bit 10 2 Stop bit 11 0.5 Stop bit
+
+)
+
+type CfgPrt1InProtoMask uint16
+
+const (
+	CfgPrt1InProtoMaskInUbx  CfgPrt1InProtoMask = 0x1 // UBX protocol
+	CfgPrt1InProtoMaskInNmea CfgPrt1InProtoMask = 0x2 // NMEA protocol
+	CfgPrt1InProtoMaskInRtcm CfgPrt1InProtoMask = 0x4 // RTCM2 protocol
+
+	CfgPrt1InProtoMaskInRtcm3 CfgPrt1InProtoMask = 0x20 // RTCM3 protocol (not supported in protocol versions less than 20)
+
+)
+
+type CfgPrt1OutProtoMask uint16
+
+const (
+	CfgPrt1OutProtoMaskOutUbx  CfgPrt1OutProtoMask = 0x1 // UBX protocol
+	CfgPrt1OutProtoMaskOutNmea CfgPrt1OutProtoMask = 0x2 // NMEA protocol
+
+	CfgPrt1OutProtoMaskOutRtcm3 CfgPrt1OutProtoMask = 0x20 // RTCM3 protocol (not supported in protocol versions less than 20)
+
+)
+
+type CfgPrt1Flags uint16
+
+const (
+	CfgPrt1FlagsExtendedTxTimeout CfgPrt1Flags = 0x2 // Extended TX timeout: if set, the port will time out if allocated TX memory &gt;=4 kB and no activity for 1. 5 s. If not set the port will time out if no activity for 1.5 s regardless on the amount of allocated TX memory .
+
+)
+
 // 32.13 UBX-INF (0x04)
 // Information Messages: i.e. Printf-Style Messages, with IDs such as Error, Warning, Notice.
 // Messages in the INF class are used to output strings in a printf style from the firmware or
